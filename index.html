@@ -67,14 +67,14 @@
         border: 1px solid #ddd;
         border-radius: 4px;
       }
-      /* Add these styles to your existing CSS */
+      /* Terminal styles */
       .terminal {
         font-family: "Courier New", monospace;
-        background-color: #fff;
+        background-color: #2a2a2a;
         color: #fff;
         padding: 10px;
         border-radius: 4px;
-        min-height: 40px;
+        min-height: 120px;
         display: flex;
         flex-direction: column;
       }
@@ -83,58 +83,45 @@
         white-space: pre-wrap;
         word-break: break-word;
         margin-bottom: 5px;
-        height: 10px;
+        min-height: 80px;
+        overflow-y: auto;
       }
 
       .terminal-input-container {
         display: flex;
-        font-weight: bold;
-
         align-items: center;
         color: #fff;
       }
 
       .terminal-prompt {
-        font-weight: bold;
-
-        color: #be3dcf;
+        color: #4caf50;
         margin-right: 5px;
+        display: none;
       }
 
       #terminal-input {
         flex: 1;
         background-color: transparent;
         border: none;
-        font-weight: bold;
-
-        color: #be3dcf;
+        color: #fff;
         font-family: "Courier New", monospace;
         font-size: 14px;
         outline: none;
+        display: none;
       }
 
       #terminal-input::placeholder {
-        color: #be3dcf;
-        opacity: 0.7;
+        color: rgba(255, 255, 255, 0.5);
       }
 
-      /* Optional: Add a blinking cursor effect */
-      @keyframes blink {
-        0%,
-        100% {
-          opacity: 1;
-        }
-        50% {
-          opacity: 0;
-        }
-      }
+      /* Status text */
       #status-text {
-        color: #be3dcf;
+        color: #555;
+        margin-top: 10px;
+        font-style: italic;
       }
-      #terminal-input:focus::after {
-        content: "|";
-        animation: blink 1s infinite;
-      }
+
+      /* Displays section */
       .displays {
         display: flex;
         gap: 20px;
@@ -176,43 +163,162 @@
 
       <div class="code-container">
         <textarea id="code-editor">
-# Example MIPS program with .data and .text sections
 .data
-array:    .word 1, 2, 3, 4, 5   # Initialize array of 5 integers
-message:  .asciiz "Sum is: "    # Define a string
-
+prompt_initial: .asciiz "Please select from the options above: "
+prompt_selection: .asciiz "\n1.Fibonacci | 2.Factorial | 3.Negative/Positive | 4.EXIT \n"
+prompt_fib: .asciiz "You have selected: Fibonacci. "
+prompt_fact: .asciiz "You have selected: Factorial. "
+prompt_nega: .asciiz "You have selected: Negative/Positive. "
+prompt_input: .asciiz "Please enter valid integer: "
+prompt_result: .asciiz "The result is: "
+prompt_negative_true: .asciiz "Negative."
+prompt_positive_true: .asciiz "Positive."
+prompt_zero_error: .asciiz "INVALID NUMBER."
 .text
-.globl main
-main:
-    # Calculate sum of array elements
-    la $t0, array       # Load address of array
-    addi $t1, $zero, 5  # Size of array
-    addi $t2, $zero, 0  # Initialize sum to 0
-    
+addi $t1, $zero, 1  # fib
+addi $t2, $zero, 2  # fact
+addi $t3, $zero, 3  # nega
+addi $t4, $zero, 4  # end
+j loop
+
 loop:
-    lw $t3, 0($t0)      # Load array element
-    add $t2, $t2, $t3   # Add to sum
-    addi $t0, $t0, 4    # Move to next element
-    addi $t1, $t1, -1   # Decrement counter
-    bne $t1, $zero, loop # Continue if not done
-    
-    # Store the result
-    sw $t2, 0($zero)    # Store result at memory address 0
-    
-    # Example of jal, j, and jr
-    jal print_result    # Jump and link to print_result
-    j exit              # Jump to exit
-    
-print_result:
-    # This would print the result in a real MIPS environment
-    # For this simulator, we'll just demonstrate the call
-    addi $v0, $zero, 1  # Syscall code for print integer
-    add $a0, $zero, $t2 # Pass sum as argument
-    # syscall would go here in real MIPS
-    jr $ra              # Return to caller
-    
-exit:
-    # Program exit
+    ##### PROMPTS PRINTS #####
+    li $v0, 4
+    la $a0, prompt_selection
+    syscall
+    la $a0, prompt_initial
+    syscall
+
+    ##### READ INPUT #####
+    li $v0, 5
+    syscall
+    add $t0, $v0, $zero
+
+    ##### COMPARISON #####
+    beq $t0, $t1, fib
+    beq $t0, $t2, fact
+    beq $t0, $t3, nega
+    beq $t0, $t4, end
+
+results:
+    add $a1, $v0, $zero
+    li $v0, 4
+    la $a0, prompt_result
+    syscall
+    li $v0, 1
+    add $a0, $a1, $zero
+    syscall
+    j loop
+
+end:
+    li $v0, 10
+    syscall
+
+fib:
+    li $v0, 4
+    la $a0, prompt_fib
+    syscall
+    la $a0, prompt_input
+    syscall
+    li $v0, 5
+    syscall
+    add $a0, $v0, $zero
+    jal fibonacci
+    j results
+
+fibonacci:
+    addi $sp, $sp, -12
+    sw $ra, 0($sp)
+    sw $s0, 4($sp)
+    sw $s1, 8($sp)
+    add $s0, $a0, $zero
+    beq $s0, $zero, result_0
+    beq $s0, $t1, result_1
+    addi $a0, $s0, -1
+    jal fibonacci
+    add $s1, $zero, $v0
+    addi $a0, $s0, -2
+    jal fibonacci
+    add $v0, $v0, $s1
+
+exit_fib:
+    lw $ra, 0($sp)
+    lw $s0, 4($sp)
+    lw $s1, 8($sp)
+    addi $sp, $sp, 12
+    jr $ra
+
+result_0:
+    li $v0, 0
+    j exit_fib
+
+result_1:
+    li $v0, 1
+    j exit_fib
+
+fact:
+    li $v0, 4
+    la $a0, prompt_fact
+    syscall
+    la $a0, prompt_input
+    syscall
+    li $v0, 5
+    syscall
+    add $a0, $v0, $zero
+    jal factorial
+    j results
+
+factorial:
+    addi $sp, $sp, -8
+    sw $ra, 4($sp)
+    sw $a0, 0($sp)
+    slti $t0, $a0, 1
+    beq $t0, $zero, exit_fact
+    addi $v0, $zero, 1
+    addi $sp, $sp, 8
+    jr $ra
+
+exit_fact:
+    addi $a0, $a0, -1
+    jal factorial
+    lw $a0, 0($sp)
+    lw $ra, 4($sp)
+    addi $sp, $sp, 8
+    mul $v0, $a0, $v0
+    jr $ra
+
+nega:
+    li $v0, 4
+    la $a0, prompt_nega
+    syscall
+    la $a0, prompt_input
+    syscall
+    li $v0, 5
+    syscall
+    add $a0, $v0, $zero
+    beq $a0, $zero, zero_error
+    jal negative
+    j results
+
+negative:
+    slt $a1, $a0, $zero
+    beq $a1, $t1, negative_true
+    li $v0, 4
+    la $a0, prompt_positive_true
+    syscall
+    j loop
+
+negative_true:
+    li $v0, 4
+    la $a0, prompt_negative_true
+    syscall
+    j loop
+
+zero_error:
+    li $v0, 4
+    la $a0, prompt_zero_error
+    syscall
+    j loop
 </textarea
         >
       </div>
@@ -227,14 +333,17 @@ exit:
         <div class="terminal">
           <div id="terminal-output"></div>
           <div class="terminal-input-container">
+            <span class="terminal-prompt">></span>
             <input
               type="text"
               id="terminal-input"
-              placeholder=" > Enter input here..."
+              placeholder="Enter input here..."
             />
           </div>
         </div>
+        <div id="status-text"></div>
       </div>
+
       <div class="displays">
         <div class="display-container">
           <h3>Registers</h3>
@@ -346,6 +455,9 @@ exit:
           this.waitingForInput = false;
           this.inputCallback = null;
           this.terminalOutput = "";
+
+          // Clear terminal output
+          this.clearTerminal();
         }
 
         setupEventListeners() {
@@ -374,17 +486,19 @@ exit:
         printToTerminal(text) {
           this.terminalOutput += text;
           const terminalOutput = document.getElementById("terminal-output");
-          // Add a null check to prevent errors
           if (terminalOutput) {
             terminalOutput.textContent = this.terminalOutput;
-          } else {
-            console.warn("Terminal output element not found");
+            // Scroll to bottom when new content is added
+            terminalOutput.scrollTop = terminalOutput.scrollHeight;
           }
         }
 
         clearTerminal() {
           this.terminalOutput = "";
-          document.getElementById("terminal-output").textContent = "";
+          const terminalOutput = document.getElementById("terminal-output");
+          if (terminalOutput) {
+            terminalOutput.textContent = "";
+          }
         }
 
         handleTerminalInput(input) {
@@ -426,13 +540,18 @@ exit:
         }
 
         setStatus(message) {
-          // Try to find status-text element first
+          // Don't show "add $t1" messages or similar instruction execution messages
+          if (
+            message.startsWith("Executing:") ||
+            message.startsWith("Executing line") ||
+            /Executing.*add.*\$t[0-9]/.test(message)
+          ) {
+            return;
+          }
+
           const statusElement = document.getElementById("status-text");
           if (statusElement) {
             statusElement.textContent = message;
-          } else {
-            // Fall back to terminal output
-            this.printToTerminal(message + "\n");
           }
         }
 
@@ -463,11 +582,9 @@ exit:
             } else if (this.waitingForInput) {
               // Program is waiting for input, execution will continue after input
             } else {
-              this.setStatus(
-                `Reached end of program at line ${this.currentLine}`
-              );
+              this.setStatus(`Program execution completed`);
               this.runningAll = false;
-              alert(`Reached the end of program at line ${this.currentLine}.`);
+              alert(`Program execution completed.`);
             }
 
             this.updateRegisterDisplay();
@@ -551,11 +668,7 @@ exit:
           }
 
           if (this.program.length > 0) {
-            this.setStatus(
-              `Program parsed: ${this.program.length} instructions, ${
-                Object.keys(this.labels).length
-              } labels, ${Object.keys(this.symbols).length} data symbols`
-            );
+            this.setStatus(`Program loaded successfully`);
             this.updateMemoryDisplay();
           } else {
             this.setStatus(
@@ -563,7 +676,7 @@ exit:
             );
           }
         }
-
+        // Replace the existing processDataDirective function with this updated version
         processDataDirective(label, directive) {
           // Save symbol address
           this.symbols[label] = this.memoryAddress;
@@ -607,35 +720,26 @@ exit:
               break;
 
             case ".asciiz":
-              // Store null-terminated string
+            case ".ascii":
+              // Store string (with or without null terminator)
               let stringContent = "";
               // Extract string between quotes
-              const match = directive.match(/\.asciiz\s+"([^"]*)"/);
+              const match = directive.match(/\.(asciiz|ascii)\s+"([^"]*)"/);
               if (match) {
-                stringContent = match[1];
+                stringContent = match[2];
+
+                // Process escape sequences
+                stringContent = this.processEscapeSequences(stringContent);
 
                 // Store each character as a byte
                 for (let i = 0; i < stringContent.length; i++) {
                   this.memory[this.memoryAddress] = stringContent.charCodeAt(i);
                   this.memoryAddress++;
                 }
-                // Add null terminator
-                this.memory[this.memoryAddress] = 0;
-                this.memoryAddress++;
-              }
-              break;
 
-            case ".ascii":
-              // Store string without null terminator
-              let asciiContent = "";
-              // Extract string between quotes
-              const asciiMatch = directive.match(/\.ascii\s+"([^"]*)"/);
-              if (asciiMatch) {
-                asciiContent = asciiMatch[1];
-
-                // Store each character as a byte
-                for (let i = 0; i < asciiContent.length; i++) {
-                  this.memory[this.memoryAddress] = asciiContent.charCodeAt(i);
+                // Add null terminator for asciiz
+                if (directiveType === ".asciiz") {
+                  this.memory[this.memoryAddress] = 0;
                   this.memoryAddress++;
                 }
               }
@@ -662,43 +766,42 @@ exit:
           }
         }
 
-        setStatus(message) {
-          // Try to find status-text element first
-          const statusElement = document.getElementById("status-text");
-          if (statusElement) {
-            statusElement.textContent = message;
-          } else {
-            // Fall back to terminal output
-            this.printToTerminal(message + "\n");
-          }
+        // Add this new helper method to the MIPSSimulator class
+        processEscapeSequences(str) {
+          return str
+            .replace(/\\n/g, "\n")
+            .replace(/\\t/g, "\t")
+            .replace(/\\r/g, "\r")
+            .replace(/\\0/g, "\0")
+            .replace(/\\"/g, '"')
+            .replace(/\\'/g, "'")
+            .replace(/\\\\/g, "\\");
         }
         highlightLine(lineNumber) {
           const codeEditor = document.getElementById("code-editor");
           const lines = codeEditor.value.split("\n");
 
-          // Update status
-          this.setStatus(
-            `Executing line ${lineNumber + 1}: ${lines[lineNumber].trim()}`
-          );
+          // Don't update status for line execution
+          // this.setStatus(`Executing line ${lineNumber + 1}: ${lines[lineNumber].trim()}`);
 
           // Create a temporary div that will display the highlighted code
           const highlightContainer = document.createElement("div");
           highlightContainer.id = "highlighted-code";
           highlightContainer.style.cssText = `
-    position: absolute;
-    top: ${codeEditor.offsetTop}px;
-    left: ${codeEditor.offsetLeft}px;
-    width: ${codeEditor.offsetWidth}px;
-    height: ${codeEditor.offsetHeight}px;
-    background-color: white;
-    overflow: auto;
-    font-family: "Courier New", monospace;
-    font-size: 14px;
-    padding: 10px;
-    border: 1px solid #ccc;
-    pointer-events: none;
-    white-space: pre;
-  `;
+            position: absolute;
+            top: ${codeEditor.offsetTop}px;
+            left: ${codeEditor.offsetLeft}px;
+            width: ${codeEditor.offsetWidth}px;
+            height: ${codeEditor.offsetHeight}px;
+            background-color: white;
+            overflow: auto;
+            font-family: "Courier New", monospace;
+            font-size: 14px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            pointer-events: none;
+            white-space: pre;
+          `;
 
           // Create highlighted HTML content
           let highlightedContent = "";
@@ -740,6 +843,7 @@ exit:
             }
           }, 0);
         }
+
         clearHighlight() {
           const existingHighlight = document.getElementById("highlighted-code");
           if (existingHighlight) {
@@ -846,8 +950,6 @@ exit:
             }
 
             try {
-              const instruction = this.program[this.currentLine];
-              this.setStatus(`Executing: ${instruction}`);
               this.executeInstruction();
               this.updateRegisterDisplay();
               this.updateMemoryDisplay();
@@ -860,8 +962,8 @@ exit:
               console.error(e);
             }
           } else {
-            this.setStatus("End of program reached");
-            alert("End of program reached.");
+            this.setStatus("Program execution completed");
+            alert("Program execution completed.");
           }
         }
 
