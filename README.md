@@ -25,7 +25,7 @@ This ensures that you always have the latest version without needing to update m
 ### Running Locally
 1. Clone the repository:
    ```sh
-   git clone <https://github.com/charbel-j-estephan/Mips-Simulator>
+   git clone https://github.com/charbel-j-estephan/Mips-Simulator
    cd mips-web-visualizer
    ```
 2. Open `index.html` in a web browser.
