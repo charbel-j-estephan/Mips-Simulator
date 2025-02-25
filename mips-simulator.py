@@ -173,20 +173,22 @@ class MIPSSimulator:
         mem_scroll.config(command=self.mem_tree.yview)
 
     def load_default_program(self):
-        default_code = """# Example MIPS program
+        default_code = """
+# Example MIPS program
 # Calculate sum of numbers from 1 to 5
     addi $t0, $zero, 1    # i = 1
-    addi $t1, $zero, 5    # limit = 5
+    addi $t1, $zero, 6    # limit = 5 
     addi $t2, $zero, 0    # sum = 0
+    addi $t5, $zero, 1    # temp = 1
 loop:
     add $t2, $t2, $t0     # sum = sum + i
     addi $t0, $t0, 1      # i = i + 1
-    ble $t0, $t1, loop    # if i <= limit, goto loop
+    slt $t4,$t0,$t1
+    beq $t4, $t5, loop    # if i <= 5, goto loop
     sw $t2, 0($zero)      # store result in memory
     lw $a0, 0($zero)      # load result for printing
-    mul $v0, $a0, $t1     # multiply by 5 for demo
-    sub $s1, $v0, $a0     # subtract original value
-    slt $s2, $a0, $v0     # set if a0 < v0
+    sll $v0, $a0, 2       # shift left logical by 2 (multiply by 4)
+    srl $s0, $v0, 1       # shift right logical by 1 (divide by 2)
 """
         self.code_text.delete("1.0", tk.END)
         self.code_text.insert(tk.END, default_code)

@@ -1,0 +1,1345 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MIPS Web Simulator</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background-color: #f5f5f5;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background-color: white;
+        padding: 20px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        border-radius: 5px;
+      }
+      h1 {
+        text-align: center;
+        color: #333;
+      }
+      .code-container {
+        margin-bottom: 20px;
+        position: relative;
+      }
+      #code-editor {
+        width: 100%;
+        height: 300px;
+        font-family: "Courier New", monospace;
+        font-size: 14px;
+        padding: 10px;
+        border: 1px solid #ccc;
+        resize: vertical;
+      }
+      .controls {
+        margin-bottom: 20px;
+        display: flex;
+        gap: 10px;
+      }
+      button {
+        padding: 8px 15px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+      }
+      #run-button {
+        background-color: #4caf50;
+        color: white;
+      }
+      #step-button {
+        background-color: #2196f3;
+        color: white;
+      }
+      #reset-button {
+        background-color: #f44336;
+        color: white;
+      }
+      .status-container {
+        margin-bottom: 20px;
+        padding: 10px;
+        background-color: #f9f9f9;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+      /* Add these styles to your existing CSS */
+      .terminal {
+        font-family: "Courier New", monospace;
+        background-color: #fff;
+        color: #fff;
+        padding: 10px;
+        border-radius: 4px;
+        min-height: 40px;
+        display: flex;
+        flex-direction: column;
+      }
+
+      #terminal-output {
+        white-space: pre-wrap;
+        word-break: break-word;
+        margin-bottom: 5px;
+        height: 10px;
+      }
+
+      .terminal-input-container {
+        display: flex;
+        font-weight: bold;
+
+        align-items: center;
+        color: #fff;
+      }
+
+      .terminal-prompt {
+        font-weight: bold;
+
+        color: #be3dcf;
+        margin-right: 5px;
+      }
+
+      #terminal-input {
+        flex: 1;
+        background-color: transparent;
+        border: none;
+        font-weight: bold;
+
+        color: #be3dcf;
+        font-family: "Courier New", monospace;
+        font-size: 14px;
+        outline: none;
+      }
+
+      #terminal-input::placeholder {
+        color: #be3dcf;
+        opacity: 0.7;
+      }
+
+      /* Optional: Add a blinking cursor effect */
+      @keyframes blink {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0;
+        }
+      }
+      #status-text {
+        color: #be3dcf;
+      }
+      #terminal-input:focus::after {
+        content: "|";
+        animation: blink 1s infinite;
+      }
+      .displays {
+        display: flex;
+        gap: 20px;
+      }
+      .display-container {
+        flex: 1;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 10px;
+        max-height: 400px;
+        overflow-y: auto;
+      }
+      .display-container h3 {
+        margin-top: 0;
+        padding-bottom: 5px;
+        border-bottom: 1px solid #eee;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th,
+      td {
+        padding: 8px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+      }
+      th {
+        background-color: #f2f2f2;
+      }
+      .highlight {
+        background-color: #ffff99;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>MIPS Web Simulator</h1>
+
+      <div class="code-container">
+        <textarea id="code-editor">
+# Example MIPS program with .data and .text sections
+.data
+array:    .word 1, 2, 3, 4, 5   # Initialize array of 5 integers
+message:  .asciiz "Sum is: "    # Define a string
+
+.text
+.globl main
+main:
+    # Calculate sum of array elements
+    la $t0, array       # Load address of array
+    addi $t1, $zero, 5  # Size of array
+    addi $t2, $zero, 0  # Initialize sum to 0
+    
+loop:
+    lw $t3, 0($t0)      # Load array element
+    add $t2, $t2, $t3   # Add to sum
+    addi $t0, $t0, 4    # Move to next element
+    addi $t1, $t1, -1   # Decrement counter
+    bne $t1, $zero, loop # Continue if not done
+    
+    # Store the result
+    sw $t2, 0($zero)    # Store result at memory address 0
+    
+    # Example of jal, j, and jr
+    jal print_result    # Jump and link to print_result
+    j exit              # Jump to exit
+    
+print_result:
+    # This would print the result in a real MIPS environment
+    # For this simulator, we'll just demonstrate the call
+    addi $v0, $zero, 1  # Syscall code for print integer
+    add $a0, $zero, $t2 # Pass sum as argument
+    # syscall would go here in real MIPS
+    jr $ra              # Return to caller
+    
+exit:
+    # Program exit
+</textarea
+        >
+      </div>
+
+      <div class="controls">
+        <button id="run-button">Run All</button>
+        <button id="step-button">Step</button>
+        <button id="reset-button">Reset</button>
+      </div>
+
+      <div class="status-container">
+        <div class="terminal">
+          <div id="terminal-output"></div>
+          <div class="terminal-input-container">
+            <input
+              type="text"
+              id="terminal-input"
+              placeholder=" > Enter input here..."
+            />
+          </div>
+        </div>
+      </div>
+      <div class="displays">
+        <div class="display-container">
+          <h3>Registers</h3>
+          <div id="registers-container">
+            <table id="registers-table">
+              <thead>
+                <tr>
+                  <th>Register</th>
+                  <th>Value</th>
+                  <th>Hex</th>
+                </tr>
+              </thead>
+              <tbody id="registers-body">
+                <!-- Register data will be populated here -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="display-container">
+          <h3>Memory</h3>
+          <div id="memory-container">
+            <table id="memory-table">
+              <thead>
+                <tr>
+                  <th>Address</th>
+                  <th>Value</th>
+                  <th>Hex</th>
+                </tr>
+              </thead>
+              <tbody id="memory-body">
+                <!-- Memory data will be populated here -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // MIPS Simulator JavaScript Implementation
+      class MIPSSimulator {
+        constructor() {
+          this.resetSimulator();
+          this.setupEventListeners();
+          this.updateRegisterDisplay();
+
+          // Make sure the code container has position relative for proper highlighting
+          document.querySelector(".code-container").style.position = "relative";
+        }
+
+        resetSimulator() {
+          // Initialize registers
+          this.registers = {
+            $zero: 0,
+            $at: 0,
+            $v0: 0,
+            $v1: 0,
+            $a0: 0,
+            $a1: 0,
+            $a2: 0,
+            $a3: 0,
+            $t0: 0,
+            $t1: 0,
+            $t2: 0,
+            $t3: 0,
+            $t4: 0,
+            $t5: 0,
+            $t6: 0,
+            $t7: 0,
+            $s0: 0,
+            $s1: 0,
+            $s2: 0,
+            $s3: 0,
+            $s4: 0,
+            $s5: 0,
+            $s6: 0,
+            $s7: 0,
+            $t8: 0,
+            $t9: 0,
+            $k0: 0,
+            $k1: 0,
+            $gp: 0,
+            $sp: 0,
+            $fp: 0,
+            $ra: 0,
+            $hi: 0,
+            $lo: 0,
+            $pc: 0,
+          };
+
+          // Initialize memory
+          this.memory = {};
+
+          // Initialize symbol table
+          this.symbols = {};
+          this.memoryAddress = 0x10010000; // Start of data segment
+
+          // Program state
+          this.program = [];
+          this.currentLine = 0;
+          this.labels = {};
+          this.executionFinished = false;
+          this.highlightedLine = null;
+          this.executingLine = null;
+          this.inDataSection = false;
+          this.inTextSection = false;
+          this.globlMain = false;
+          this.waitingForInput = false;
+          this.inputCallback = null;
+          this.terminalOutput = "";
+        }
+
+        setupEventListeners() {
+          document
+            .getElementById("run-button")
+            .addEventListener("click", () => this.runProgram());
+          document
+            .getElementById("step-button")
+            .addEventListener("click", () => this.stepProgram());
+          document
+            .getElementById("reset-button")
+            .addEventListener("click", () => this.resetProgram());
+          const terminalInput = document.getElementById("terminal-input");
+          if (terminalInput) {
+            terminalInput.addEventListener("keydown", (e) => {
+              if (e.key === "Enter" && this.waitingForInput) {
+                const input = terminalInput.value;
+                this.handleTerminalInput(input);
+                terminalInput.value = "";
+                e.preventDefault();
+              }
+            });
+          }
+        }
+
+        printToTerminal(text) {
+          this.terminalOutput += text;
+          const terminalOutput = document.getElementById("terminal-output");
+          // Add a null check to prevent errors
+          if (terminalOutput) {
+            terminalOutput.textContent = this.terminalOutput;
+          } else {
+            console.warn("Terminal output element not found");
+          }
+        }
+
+        clearTerminal() {
+          this.terminalOutput = "";
+          document.getElementById("terminal-output").textContent = "";
+        }
+
+        handleTerminalInput(input) {
+          if (this.waitingForInput && this.inputCallback) {
+            this.printToTerminal(input + "\n");
+            this.inputCallback(input);
+            this.waitingForInput = false;
+            this.inputCallback = null;
+
+            // Re-enable buttons
+            document.getElementById("run-button").disabled = false;
+            document.getElementById("step-button").disabled = false;
+
+            // Hide prompt
+            document.querySelector(".terminal-prompt").style.display = "none";
+            document.getElementById("terminal-input").style.display = "none";
+
+            // Continue execution
+            this.currentLine++;
+            if (this.runningAll) {
+              this.runProgram();
+            }
+          }
+        }
+
+        readFromTerminal(callback) {
+          this.waitingForInput = true;
+          this.inputCallback = callback;
+
+          // Show prompt
+          document.querySelector(".terminal-prompt").style.display = "inline";
+          const inputElement = document.getElementById("terminal-input");
+          inputElement.style.display = "inline";
+          inputElement.focus();
+
+          // Disable buttons while waiting for input
+          document.getElementById("run-button").disabled = true;
+          document.getElementById("step-button").disabled = true;
+        }
+
+        setStatus(message) {
+          // Try to find status-text element first
+          const statusElement = document.getElementById("status-text");
+          if (statusElement) {
+            statusElement.textContent = message;
+          } else {
+            // Fall back to terminal output
+            this.printToTerminal(message + "\n");
+          }
+        }
+
+        runProgram() {
+          if (!this.program.length) {
+            this.parseProgram();
+          }
+
+          if (!this.program.length) {
+            return;
+          }
+
+          this.runningAll = true;
+
+          try {
+            while (
+              !this.executionFinished &&
+              this.currentLine < this.program.length &&
+              !this.waitingForInput
+            ) {
+              this.executeInstruction();
+            }
+
+            if (this.executionFinished) {
+              this.setStatus("Program execution completed");
+              this.runningAll = false;
+              alert("Program execution has finished successfully.");
+            } else if (this.waitingForInput) {
+              // Program is waiting for input, execution will continue after input
+            } else {
+              this.setStatus(
+                `Reached end of program at line ${this.currentLine}`
+              );
+              this.runningAll = false;
+              alert(`Reached the end of program at line ${this.currentLine}.`);
+            }
+
+            this.updateRegisterDisplay();
+            this.updateMemoryDisplay();
+          } catch (e) {
+            this.runningAll = false;
+            alert(`Error while running program: ${e.message}`);
+            console.error(e);
+          }
+        }
+
+        parseProgram() {
+          const code = document.getElementById("code-editor").value;
+          const lines = code.split("\n");
+          this.program = [];
+          this.labels = {};
+          this.lineMap = {};
+          this.symbols = {};
+          this.memoryAddress = 0x10010000; // Start of data segment
+          this.globlMain = false;
+
+          let programLine = 0;
+          let inDataSection = false;
+          let inTextSection = false;
+
+          // First pass: Parse directives and collect labels
+          for (let i = 0; i < lines.length; i++) {
+            // Remove comments and trim
+            let line = lines[i].replace(/#.*$/, "").trim();
+
+            if (!line) continue;
+
+            // Check for section directives
+            if (line.toLowerCase() === ".data") {
+              inDataSection = true;
+              inTextSection = false;
+              continue;
+            } else if (line.toLowerCase() === ".text") {
+              inDataSection = false;
+              inTextSection = true;
+              continue;
+            } else if (line.toLowerCase() === ".globl main") {
+              this.globlMain = true;
+              continue;
+            }
+
+            // Process data section
+            if (inDataSection) {
+              const labelMatch = line.match(/^(\w+):\s*(.*)/);
+              if (labelMatch) {
+                const label = labelMatch[1];
+                const directive = labelMatch[2].trim();
+                this.processDataDirective(label, directive);
+              }
+            }
+            // Process text section
+            else if (inTextSection) {
+              // Check for labels
+              const labelMatch = line.match(/^(\w+):\s*(.*)/);
+              if (labelMatch) {
+                const label = labelMatch[1];
+                const restOfLine = labelMatch[2].trim();
+                this.labels[label] = programLine;
+
+                if (restOfLine) {
+                  this.lineMap[programLine] = i;
+                  this.program.push(restOfLine);
+                  programLine++;
+                }
+              } else {
+                this.lineMap[programLine] = i;
+                this.program.push(line);
+                programLine++;
+              }
+            }
+          }
+
+          // If .globl main is specified, start execution at main label
+          if (this.globlMain && "main" in this.labels) {
+            this.currentLine = this.labels["main"];
+          }
+
+          if (this.program.length > 0) {
+            this.setStatus(
+              `Program parsed: ${this.program.length} instructions, ${
+                Object.keys(this.labels).length
+              } labels, ${Object.keys(this.symbols).length} data symbols`
+            );
+            this.updateMemoryDisplay();
+          } else {
+            this.setStatus(
+              "Warning: No valid instructions found in .text section"
+            );
+          }
+        }
+
+        processDataDirective(label, directive) {
+          // Save symbol address
+          this.symbols[label] = this.memoryAddress;
+
+          const parts = directive.trim().split(/\s+/);
+          if (parts.length < 1) return;
+
+          const directiveType = parts[0].toLowerCase();
+          const args = parts
+            .slice(1)
+            .join(" ")
+            .split(",")
+            .map((arg) => arg.trim());
+
+          switch (directiveType) {
+            case ".word":
+              // Store words (integers)
+              for (const arg of args) {
+                const value = parseInt(arg);
+                this.memory[this.memoryAddress] = value;
+                this.memoryAddress += 4; // Word size is 4 bytes
+              }
+              break;
+
+            case ".half":
+              // Store half words (2 bytes)
+              for (const arg of args) {
+                const value = parseInt(arg) & 0xffff;
+                this.memory[this.memoryAddress] = value;
+                this.memoryAddress += 2;
+              }
+              break;
+
+            case ".byte":
+              // Store bytes
+              for (const arg of args) {
+                const value = parseInt(arg) & 0xff;
+                this.memory[this.memoryAddress] = value;
+                this.memoryAddress += 1;
+              }
+              break;
+
+            case ".asciiz":
+              // Store null-terminated string
+              let stringContent = "";
+              // Extract string between quotes
+              const match = directive.match(/\.asciiz\s+"([^"]*)"/);
+              if (match) {
+                stringContent = match[1];
+
+                // Store each character as a byte
+                for (let i = 0; i < stringContent.length; i++) {
+                  this.memory[this.memoryAddress] = stringContent.charCodeAt(i);
+                  this.memoryAddress++;
+                }
+                // Add null terminator
+                this.memory[this.memoryAddress] = 0;
+                this.memoryAddress++;
+              }
+              break;
+
+            case ".ascii":
+              // Store string without null terminator
+              let asciiContent = "";
+              // Extract string between quotes
+              const asciiMatch = directive.match(/\.ascii\s+"([^"]*)"/);
+              if (asciiMatch) {
+                asciiContent = asciiMatch[1];
+
+                // Store each character as a byte
+                for (let i = 0; i < asciiContent.length; i++) {
+                  this.memory[this.memoryAddress] = asciiContent.charCodeAt(i);
+                  this.memoryAddress++;
+                }
+              }
+              break;
+
+            case ".space":
+              // Allocate space (in bytes)
+              if (args.length > 0) {
+                const size = parseInt(args[0]);
+                for (let i = 0; i < size; i++) {
+                  this.memory[this.memoryAddress] = 0;
+                  this.memoryAddress++;
+                }
+              }
+              break;
+
+            default:
+              console.warn("Unsupported directive:", directiveType);
+          }
+
+          // Make sure memory address is word-aligned for the next label
+          if (this.memoryAddress % 4 !== 0) {
+            this.memoryAddress += 4 - (this.memoryAddress % 4);
+          }
+        }
+
+        setStatus(message) {
+          // Try to find status-text element first
+          const statusElement = document.getElementById("status-text");
+          if (statusElement) {
+            statusElement.textContent = message;
+          } else {
+            // Fall back to terminal output
+            this.printToTerminal(message + "\n");
+          }
+        }
+        highlightLine(lineNumber) {
+          const codeEditor = document.getElementById("code-editor");
+          const lines = codeEditor.value.split("\n");
+
+          // Update status
+          this.setStatus(
+            `Executing line ${lineNumber + 1}: ${lines[lineNumber].trim()}`
+          );
+
+          // Create a temporary div that will display the highlighted code
+          const highlightContainer = document.createElement("div");
+          highlightContainer.id = "highlighted-code";
+          highlightContainer.style.cssText = `
+    position: absolute;
+    top: ${codeEditor.offsetTop}px;
+    left: ${codeEditor.offsetLeft}px;
+    width: ${codeEditor.offsetWidth}px;
+    height: ${codeEditor.offsetHeight}px;
+    background-color: white;
+    overflow: auto;
+    font-family: "Courier New", monospace;
+    font-size: 14px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    pointer-events: none;
+    white-space: pre;
+  `;
+
+          // Create highlighted HTML content
+          let highlightedContent = "";
+          for (let i = 0; i < lines.length; i++) {
+            if (i === lineNumber) {
+              highlightedContent += `<div id="highlighted-line" class="highlight" style="background-color: #ffff99; padding: 2px 0;">${lines[i]}</div>`;
+            } else {
+              highlightedContent += `<div>${lines[i]}</div>`;
+            }
+          }
+
+          highlightContainer.innerHTML = highlightedContent;
+
+          // Remove any existing highlight container
+          const existingHighlight = document.getElementById("highlighted-code");
+          if (existingHighlight) {
+            existingHighlight.remove();
+          }
+
+          // Add the highlight container on top of the textarea
+          codeEditor.parentNode.appendChild(highlightContainer);
+
+          // Store the currently executing line
+          this.executingLine = lineNumber;
+
+          // Center the highlighted line in the viewport
+          setTimeout(() => {
+            const highlightedLine = document.getElementById("highlighted-line");
+            if (highlightedLine) {
+              // Calculate position to center the line
+              const container = document.getElementById("highlighted-code");
+              const lineHeight = highlightedLine.offsetHeight;
+              const containerHeight = container.offsetHeight;
+              const linePosition = highlightedLine.offsetTop;
+
+              // Set scroll position to center the highlighted line
+              container.scrollTop =
+                linePosition - containerHeight / 2 + lineHeight / 2;
+            }
+          }, 0);
+        }
+        clearHighlight() {
+          const existingHighlight = document.getElementById("highlighted-code");
+          if (existingHighlight) {
+            existingHighlight.remove();
+          }
+        }
+
+        updateRegisterDisplay() {
+          const tbody = document.getElementById("registers-body");
+          tbody.innerHTML = "";
+
+          for (const [reg, value] of Object.entries(this.registers)) {
+            const hexValue = `0x${(value >>> 0).toString(16).padStart(8, "0")}`;
+            const row = document.createElement("tr");
+
+            const regCell = document.createElement("td");
+            regCell.textContent = reg;
+            row.appendChild(regCell);
+
+            const valCell = document.createElement("td");
+            valCell.textContent = value;
+            row.appendChild(valCell);
+
+            const hexCell = document.createElement("td");
+            hexCell.textContent = hexValue;
+            row.appendChild(hexCell);
+
+            tbody.appendChild(row);
+          }
+        }
+
+        updateMemoryDisplay() {
+          const tbody = document.getElementById("memory-body");
+          tbody.innerHTML = "";
+
+          // Get addresses and sort them numerically
+          const addresses = Object.keys(this.memory)
+            .map((addr) => parseInt(addr))
+            .sort((a, b) => a - b);
+
+          // Find symbols for addresses if possible
+          for (const addr of addresses) {
+            const value = this.memory[addr];
+            const hexValue = `0x${(value >>> 0).toString(16).padStart(8, "0")}`;
+
+            const row = document.createElement("tr");
+
+            const addrCell = document.createElement("td");
+            // Look for symbol name
+            let symbolName = "";
+            for (const [symbol, symbolAddr] of Object.entries(this.symbols)) {
+              if (symbolAddr === addr) {
+                symbolName = symbol + ": ";
+                break;
+              }
+            }
+            addrCell.textContent = `${symbolName}0x${addr
+              .toString(16)
+              .padStart(8, "0")}`;
+            row.appendChild(addrCell);
+
+            const valCell = document.createElement("td");
+            // Display as character if in ASCII range
+            if (value >= 32 && value <= 126) {
+              valCell.textContent = `${value} ('${String.fromCharCode(
+                value
+              )}')`;
+            } else {
+              valCell.textContent = value;
+            }
+            row.appendChild(valCell);
+
+            const hexCell = document.createElement("td");
+            hexCell.textContent = hexValue;
+            row.appendChild(hexCell);
+
+            tbody.appendChild(row);
+          }
+        }
+
+        resetProgram() {
+          this.resetSimulator();
+          this.clearHighlight();
+          this.updateRegisterDisplay();
+          this.updateMemoryDisplay();
+          this.setStatus("Program reset. Ready to execute.");
+        }
+
+        stepProgram() {
+          if (!this.program.length) {
+            this.parseProgram();
+          }
+
+          if (!this.program.length) {
+            return;
+          }
+
+          if (
+            !this.executionFinished &&
+            this.currentLine < this.program.length
+          ) {
+            if (this.currentLine in this.lineMap) {
+              this.highlightLine(this.lineMap[this.currentLine]);
+            }
+
+            try {
+              const instruction = this.program[this.currentLine];
+              this.setStatus(`Executing: ${instruction}`);
+              this.executeInstruction();
+              this.updateRegisterDisplay();
+              this.updateMemoryDisplay();
+
+              if (this.executionFinished) {
+                alert("Program execution has finished successfully.");
+              }
+            } catch (e) {
+              alert(`Error executing instruction: ${e.message}`);
+              console.error(e);
+            }
+          } else {
+            this.setStatus("End of program reached");
+            alert("End of program reached.");
+          }
+        }
+
+        executeInstruction() {
+          if (this.currentLine >= this.program.length) {
+            this.executionFinished = true;
+            return;
+          }
+
+          const instruction = this.program[this.currentLine];
+          const parts = instruction.split(/,|\s+/).filter((p) => p.trim());
+
+          if (!parts.length) {
+            this.currentLine++;
+            return;
+          }
+
+          const opcode = parts[0];
+          this.executeOpcode(opcode, parts);
+        }
+
+        executeOpcode(opcode, parts) {
+          let nextLine = this.currentLine + 1;
+
+          // Implement supported instructions
+          switch (opcode) {
+            case "add":
+              if (parts.length >= 4) {
+                const [_, rd, rs, rt] = parts;
+                this.registers[rd] = this.registers[rs] + this.registers[rt];
+              }
+              break;
+
+            case "addi":
+              if (parts.length >= 4) {
+                const [_, rt, rs, imm] = parts;
+                this.registers[rt] = this.registers[rs] + parseInt(imm);
+              }
+              break;
+
+            case "sub":
+              if (parts.length >= 4) {
+                const [_, rd, rs, rt] = parts;
+                this.registers[rd] = this.registers[rs] - this.registers[rt];
+              }
+              break;
+
+            case "mul":
+              if (parts.length >= 4) {
+                const [_, rd, rs, rt] = parts;
+                const result = this.registers[rs] * this.registers[rt];
+                this.registers[rd] = result & 0xffffffff;
+              }
+              break;
+
+            case "div":
+              if (parts.length >= 3) {
+                const [_, rs, rt] = parts;
+                if (this.registers[rt] !== 0) {
+                  this.registers["$lo"] = Math.floor(
+                    this.registers[rs] / this.registers[rt]
+                  );
+                  this.registers["$hi"] =
+                    this.registers[rs] % this.registers[rt];
+                } else {
+                  alert("Division by zero error!");
+                }
+              }
+              break;
+
+            case "mflo":
+              if (parts.length >= 2) {
+                const [_, rd] = parts;
+                this.registers[rd] = this.registers["$lo"];
+              }
+              break;
+
+            case "mfhi":
+              if (parts.length >= 2) {
+                const [_, rd] = parts;
+                this.registers[rd] = this.registers["$hi"];
+              }
+              break;
+
+            case "and":
+              if (parts.length >= 4) {
+                const [_, rd, rs, rt] = parts;
+                this.registers[rd] = this.registers[rs] & this.registers[rt];
+              }
+              break;
+
+            case "andi":
+              if (parts.length >= 4) {
+                const [_, rt, rs, imm] = parts;
+                this.registers[rt] = this.registers[rs] & parseInt(imm);
+              }
+              break;
+
+            case "or":
+              if (parts.length >= 4) {
+                const [_, rd, rs, rt] = parts;
+                this.registers[rd] = this.registers[rs] | this.registers[rt];
+              }
+              break;
+
+            case "ori":
+              if (parts.length >= 4) {
+                const [_, rt, rs, imm] = parts;
+                this.registers[rt] = this.registers[rs] | parseInt(imm);
+              }
+              break;
+
+            case "xor":
+              if (parts.length >= 4) {
+                const [_, rd, rs, rt] = parts;
+                this.registers[rd] = this.registers[rs] ^ this.registers[rt];
+              }
+              break;
+
+            case "nor":
+              if (parts.length >= 4) {
+                const [_, rd, rs, rt] = parts;
+                this.registers[rd] =
+                  ~(this.registers[rs] | this.registers[rt]) & 0xffffffff;
+              }
+              break;
+
+            case "slt":
+              if (parts.length >= 4) {
+                const [_, rd, rs, rt] = parts;
+                this.registers[rd] =
+                  this.registers[rs] < this.registers[rt] ? 1 : 0;
+              }
+              break;
+
+            case "slti":
+              if (parts.length >= 4) {
+                const [_, rt, rs, imm] = parts;
+                this.registers[rt] = this.registers[rs] < parseInt(imm) ? 1 : 0;
+              }
+              break;
+
+            case "sll":
+              if (parts.length >= 4) {
+                const [_, rd, rt, shamt] = parts;
+                this.registers[rd] =
+                  (this.registers[rt] << parseInt(shamt)) & 0xffffffff;
+              }
+              break;
+
+            case "srl":
+              if (parts.length >= 4) {
+                const [_, rd, rt, shamt] = parts;
+                this.registers[rd] =
+                  (this.registers[rt] >>> parseInt(shamt)) & 0xffffffff;
+              }
+              break;
+
+            case "sra":
+              if (parts.length >= 4) {
+                const [_, rd, rt, shamt] = parts;
+                this.registers[rd] =
+                  (this.registers[rt] >> parseInt(shamt)) & 0xffffffff;
+              }
+              break;
+
+            case "lui":
+              if (parts.length >= 3) {
+                const [_, rt, imm] = parts;
+                this.registers[rt] = (parseInt(imm) << 16) & 0xffffffff;
+              }
+              break;
+
+            case "lw":
+              if (parts.length >= 3) {
+                const [_, rt, memRef] = parts;
+                const match = memRef.match(/(-?\d+)\((\$\w+)\)/);
+                if (match) {
+                  const offset = parseInt(match[1]);
+                  const rs = match[2];
+                  const addr = this.registers[rs] + offset;
+                  this.registers[rt] =
+                    addr in this.memory ? this.memory[addr] : 0;
+                }
+              }
+              break;
+
+            case "lh":
+              if (parts.length >= 3) {
+                const [_, rt, memRef] = parts;
+                const match = memRef.match(/(-?\d+)\((\$\w+)\)/);
+                if (match) {
+                  const offset = parseInt(match[1]);
+                  const rs = match[2];
+                  const addr = this.registers[rs] + offset;
+                  // Read half-word (16 bits) from memory
+                  const value =
+                    addr in this.memory ? this.memory[addr] & 0xffff : 0;
+                  // Sign-extend
+                  this.registers[rt] =
+                    value & 0x8000 ? value | 0xffff0000 : value;
+                }
+              }
+              break;
+
+            case "lhu":
+              if (parts.length >= 3) {
+                const [_, rt, memRef] = parts;
+                const match = memRef.match(/(-?\d+)\((\$\w+)\)/);
+                if (match) {
+                  const offset = parseInt(match[1]);
+                  const rs = match[2];
+                  const addr = this.registers[rs] + offset;
+                  // Read half-word (16 bits) from memory without sign-extension
+                  this.registers[rt] =
+                    addr in this.memory ? this.memory[addr] & 0xffff : 0;
+                }
+              }
+              break;
+
+            case "lb":
+              if (parts.length >= 3) {
+                const [_, rt, memRef] = parts;
+                const match = memRef.match(/(-?\d+)\((\$\w+)\)/);
+                if (match) {
+                  const offset = parseInt(match[1]);
+                  const rs = match[2];
+                  const addr = this.registers[rs] + offset;
+                  // Read byte (8 bits) from memory
+                  const value =
+                    addr in this.memory ? this.memory[addr] & 0xff : 0;
+                  // Sign-extend
+                  this.registers[rt] =
+                    value & 0x80 ? value | 0xffffff00 : value;
+                }
+              }
+              break;
+
+            case "lbu":
+              if (parts.length >= 3) {
+                const [_, rt, memRef] = parts;
+                const match = memRef.match(/(-?\d+)\((\$\w+)\)/);
+                if (match) {
+                  const offset = parseInt(match[1]);
+                  const rs = match[2];
+                  const addr = this.registers[rs] + offset;
+                  // Read byte (8 bits) from memory without sign-extension
+                  this.registers[rt] =
+                    addr in this.memory ? this.memory[addr] & 0xff : 0;
+                }
+              }
+              break;
+
+            case "sw":
+              if (parts.length >= 3) {
+                const [_, rt, memRef] = parts;
+                const match = memRef.match(/(-?\d+)\((\$\w+)\)/);
+                if (match) {
+                  const offset = parseInt(match[1]);
+                  const rs = match[2];
+                  const addr = this.registers[rs] + offset;
+                  this.memory[addr] = this.registers[rt];
+                }
+              }
+              break;
+
+            case "sh":
+              if (parts.length >= 3) {
+                const [_, rt, memRef] = parts;
+                const match = memRef.match(/(-?\d+)\((\$\w+)\)/);
+                if (match) {
+                  const offset = parseInt(match[1]);
+                  const rs = match[2];
+                  const addr = this.registers[rs] + offset;
+                  // Store half-word (16 bits)
+                  this.memory[addr] = this.registers[rt] & 0xffff;
+                }
+              }
+              break;
+
+            case "sb":
+              if (parts.length >= 3) {
+                const [_, rt, memRef] = parts;
+                const match = memRef.match(/(-?\d+)\((\$\w+)\)/);
+                if (match) {
+                  const offset = parseInt(match[1]);
+                  const rs = match[2];
+                  const addr = this.registers[rs] + offset;
+                  // Store byte (8 bits)
+                  this.memory[addr] = this.registers[rt] & 0xff;
+                }
+              }
+              break;
+            case "beq":
+              if (parts.length >= 4) {
+                const [_, rs, rt, label] = parts;
+                if (this.registers[rs] === this.registers[rt]) {
+                  if (label in this.labels) {
+                    nextLine = this.labels[label];
+                  } else {
+                    alert(`Undefined label: ${label}`);
+                  }
+                }
+              }
+              break;
+
+            case "bne":
+              if (parts.length >= 4) {
+                const [_, rs, rt, label] = parts;
+                if (this.registers[rs] !== this.registers[rt]) {
+                  if (label in this.labels) {
+                    nextLine = this.labels[label];
+                  } else {
+                    alert(`Undefined label: ${label}`);
+                  }
+                }
+              }
+              break;
+
+            case "ble":
+              if (parts.length >= 4) {
+                const [_, rs, rt, label] = parts;
+                if (this.registers[rs] <= this.registers[rt]) {
+                  if (label in this.labels) {
+                    nextLine = this.labels[label];
+                  } else {
+                    alert(`Undefined label: ${label}`);
+                  }
+                }
+              }
+              break;
+
+            case "j":
+              if (parts.length >= 2) {
+                const [_, label] = parts;
+                if (label in this.labels) {
+                  nextLine = this.labels[label];
+                } else {
+                  alert(`Undefined label: ${label}`);
+                }
+              }
+              break;
+            case "j":
+              if (parts.length >= 2) {
+                const [_, label] = parts;
+                if (label in this.labels) {
+                  nextLine = this.labels[label];
+                } else {
+                  alert(`Undefined label: ${label}`);
+                }
+              }
+              break;
+
+            // New instruction - Jump and Link
+            case "jal":
+              if (parts.length >= 2) {
+                const [_, label] = parts;
+                if (label in this.labels) {
+                  // Store return address (next instruction) in $ra
+                  this.registers["$ra"] = this.currentLine + 1;
+                  nextLine = this.labels[label];
+                } else {
+                  alert(`Undefined label: ${label}`);
+                }
+              }
+              break;
+
+            // New instruction - Jump Register
+            case "jr":
+              if (parts.length >= 2) {
+                const [_, rs] = parts;
+                // Jump to address stored in register
+                nextLine = this.registers[rs];
+              }
+              break;
+
+            // New instruction - Load Address (pseudo-instruction)
+            case "la":
+              if (parts.length >= 3) {
+                const [_, rt, label] = parts;
+                if (label in this.symbols) {
+                  // Load the memory address of the symbol
+                  this.registers[rt] = this.symbols[label];
+                } else {
+                  alert(`Undefined symbol: ${label}`);
+                }
+              }
+              break;
+
+            // New instruction - Load Immediate (pseudo-instruction)
+            case "li":
+              if (parts.length >= 3) {
+                const [_, rt, imm] = parts;
+                // Load immediate value into register
+                this.registers[rt] = parseInt(imm) & 0xffffffff;
+              }
+              break;
+
+            case "syscall":
+              const service = this.registers["$v0"];
+              switch (service) {
+                case 1: // Print Integer
+                  const intValue = this.registers["$a0"];
+                  this.printToTerminal(intValue.toString());
+                  break;
+
+                case 4: // Print String
+                  const strAddr = this.registers["$a0"];
+                  let str = "";
+                  let addr = strAddr;
+
+                  // Read until null terminator
+                  while (addr in this.memory && this.memory[addr] !== 0) {
+                    str += String.fromCharCode(this.memory[addr]);
+                    addr++;
+                  }
+
+                  this.printToTerminal(str);
+                  break;
+
+                case 5: // Read Integer
+                  this.readFromTerminal((input) => {
+                    const value = parseInt(input.trim()) || 0;
+                    this.registers["$v0"] = value;
+                  });
+                  return; // Don't increment PC yet - will continue after input
+
+                case 8: // Read String
+                  const bufferAddr = this.registers["$a0"];
+                  const maxLength = this.registers["$a1"];
+
+                  this.readFromTerminal((input) => {
+                    // Store the input string in memory
+                    const inputStr = input.substring(0, maxLength - 1); // Leave room for null terminator
+
+                    for (let i = 0; i < inputStr.length; i++) {
+                      this.memory[bufferAddr + i] = inputStr.charCodeAt(i);
+                    }
+
+                    // Add null terminator
+                    this.memory[bufferAddr + inputStr.length] = 0;
+                  });
+                  return; // Don't increment PC yet - will continue after input
+
+                case 10: // Exit
+                  this.executionFinished = true;
+                  this.runningAll = false;
+                  this.setStatus("Program terminated with syscall exit");
+                  alert("Program terminated with syscall exit command.");
+                  break;
+
+                case 11: // Print Character
+                  const charCode = this.registers["$a0"];
+                  this.printToTerminal(String.fromCharCode(charCode));
+                  break;
+
+                case 12: // Read Character
+                  this.readFromTerminal((input) => {
+                    this.registers["$v0"] =
+                      input.length > 0 ? input.charCodeAt(0) : 0;
+                  });
+                  return; // Don't increment PC yet - will continue after input
+
+                default:
+                  alert(`Unknown syscall code: ${service}`);
+              }
+              break;
+          }
+
+          this.currentLine = nextLine;
+          this.registers["$zero"] = 0; // Ensure $zero is always 0
+        }
+      }
+
+      // Initialize the simulator when the page loads
+      document.addEventListener("DOMContentLoaded", () => {
+        const simulator = new MIPSSimulator();
+      });
+    </script>
+  </body>
+</html>
