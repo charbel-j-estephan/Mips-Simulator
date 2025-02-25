@@ -18,7 +18,7 @@ Since MIPS Web Visualizer is a web-based tool, it does not require installation.
 ### Running Online
 MIPS Web Visualizer can be accessed and used directly in a browser without downloading or setting up anything. Simply visit:
 ```
-<deployment_url>
+<[deployment_url](https://charbel-j-estephan.github.io/Mips-Web-Simulator/)>
 ```
 This ensures that you always have the latest version without needing to update manually.
 
